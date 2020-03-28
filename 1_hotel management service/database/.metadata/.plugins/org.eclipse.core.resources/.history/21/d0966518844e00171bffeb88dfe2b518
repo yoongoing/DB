@@ -1,0 +1,261 @@
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
+
+public class OrderView extends JPanel {
+	
+	JTextArea tAreaOrder = new JTextArea();
+	JLabel labelCustomerName = new JLabel("고객명");
+	JLabel labelTableName = new JLabel("테이블 명");
+	JTextField tFieldCustomerName = new JTextField();
+	JComboBox<String> comboTableName = new JComboBox();
+	
+	
+	
+	JButton buttonOrder = new JButton("주문");
+	JButton buttonCancel = new JButton("취소");
+	JButton buttonPay = new JButton("결제");
+	
+	private String loginSet[] = null;
+	
+	private Connection db;
+	private MenuView menuview = null;
+	private TableView tableView = null;
+	private TotalView totalView = null;
+	public ArrayList<String> orderList = new ArrayList<>();
+	
+	OrderView(Connection db) {
+		this.db = db;
+		this.setBorder(new TitledBorder("주문내역"));
+		this.setLayout(null);
+		tAreaOrder.setBorder(new LineBorder(Color.gray, 2));
+		tAreaOrder.setEditable(false);
+		JScrollPane scroll = new JScrollPane();
+		scroll.setViewportView(tAreaOrder);
+		
+		buttonOrder.setBackground(Color.WHITE);
+		buttonOrder.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				addOrderToDB();
+				
+			}
+		});
+		
+		
+		buttonCancel.setBackground(Color.WHITE);
+		buttonCancel.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				clearOrder();
+				tableView.checkTable(Integer.valueOf(comboTableName.getSelectedItem().toString()));
+				
+				
+			}
+		});
+		
+		buttonPay.setBackground(Color.WHITE);
+		buttonPay.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				updateSales();
+				totalView.updateDateList();
+				tableView.checkTable(Integer.valueOf(comboTableName.getSelectedItem().toString()));
+			}
+		});
+		
+		for (int i = 0; i < 20; i++) {
+			comboTableName.addItem(String.valueOf(i + 1));
+		}
+		
+		scroll.setBounds(15, 18, 200, 330);
+		labelCustomerName.setBounds(230, 15, 100, 30);
+		tFieldCustomerName.setBounds(230, 50, 100, 30);
+		labelTableName.setBounds(230, 85, 100, 30);
+		comboTableName.setBounds(230, 110, 100, 30);
+		buttonOrder.setBounds(230, 170, 100, 30);
+		buttonCancel.setBounds(230, 220, 100, 30);
+		buttonPay.setBounds(230, 270, 100, 30);
+		// order_panel
+		
+		this.add(scroll);
+		this.add(labelCustomerName);
+		this.add(tFieldCustomerName);
+		this.add(labelTableName);
+		this.add(comboTableName);
+		this.add(buttonOrder);
+		this.add(buttonCancel);
+		this.add(buttonPay);
+	}
+	
+	public void addOrderToList(String menu) {
+		orderList.add(menu);
+	}
+	
+	public int getPrice(String menuName) {
+		int price = 0;
+		try {
+			String sql = "SELECT price FROM menu WHERE name = '"+ menuName +"'";
+			PreparedStatement stmt = db.prepareStatement(sql);
+			ResultSet rs = stmt.executeQuery();
+			rs.next();
+			price = rs.getInt("price");
+			stmt.close();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return price;
+	}
+	
+	public void updateOrderList() {
+		orderList = new ArrayList<String>();
+		String tableNum = comboTableName.getSelectedItem().toString();
+		try {
+			String sql = "SELECT menuname,menuprice FROM orderlist WHERE tablenum= "+tableNum;
+			PreparedStatement stmt = db.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+            
+            while(rs.next()) {
+                String menu = rs.getString("menuname");
+                int price = Integer.parseInt(rs.getString("menuprice"));
+                orderList.add(menu);
+            }
+            stmt.close();
+            showOrderView();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	public void addOrderToDB() {
+		for(String menu : orderList) {
+			addOrder(menu, getPrice(menu), comboTableName.getSelectedItem().toString());
+		}
+	}
+	
+	public void addOrder(String menu, int price, String tableNum) {
+		try {
+			String sql = "INSERT INTO orderlist values ("
+					+ "'" + menu + "', "
+					+ "" + price + ", "
+					+ "" + tableNum + ")";
+			
+			PreparedStatement stmt = db.prepareStatement(sql);
+			stmt.executeUpdate();
+			stmt.close();
+			
+			tableView.checkTable(Integer.valueOf(tableNum));
+					
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	 public void clearOrder() {
+			String tableNum = comboTableName.getSelectedItem().toString();
+	        try {
+	            String sql = "DELETE FROM orderlist where tablenum = " + tableNum;
+	            PreparedStatement stmt = db.prepareStatement(sql);
+	            stmt.executeUpdate();
+	            stmt.close();
+	            
+	            orderList = new ArrayList<>();
+	            tAreaOrder.setText("");
+	           
+	        }
+	        catch (Exception e) {
+	        	e.printStackTrace();
+	        }
+	 }
+	
+	public int getSum(){
+		int sum = 0 ;
+		for(String menu : orderList){
+			sum += getPrice(menu);
+		}
+		return sum;
+	}
+
+	public void showOrderView(){
+		tAreaOrder.setText("");
+		for(String menu : orderList){
+			tAreaOrder.setText(tAreaOrder.getText() + menu+"\t"+getPrice(menu)+"\n");
+		}
+		int sum = getSum();
+		if(sum>0){
+			tAreaOrder.setText(tAreaOrder.getText() + "\n\n---------------------------\n" + "총 합계 " + "\t" +sum +"\n");
+		}
+	}
+	
+	public void updateSales(){
+		try{
+			PreparedStatement stmt = null;
+			String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+			
+			for(String menu : orderList){
+				int price = getPrice(menu);
+				String sql = "INSERT into total values ("
+						+"TO_DATE('"+date+"','YYYY-MM-DD'),"
+						+"'" + menu +"',"
+						+"" + price + ")";
+				stmt = db.prepareStatement(sql);
+                stmt.executeUpdate();
+			}
+			stmt.close();
+            JOptionPane.showMessageDialog(null, "결제되었습니다.");
+            clearOrder();
+            
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	public void updateWorkerSale() {
+		try {
+			
+		}
+		catch (Exception e) {
+			
+		}
+	}
+	public void setMenuView(MenuView menuview) {
+		this.menuview = menuview; 
+	}
+	
+	public void setTableView(TableView tableView) {
+		this.tableView = tableView;
+	}
+	
+	public void setTotalView(TotalView totalView) {
+		this.totalView = totalView;
+	}
+	public void setLogin(String loginSet[]) {
+		this.loginSet = loginSet;
+	}
+}

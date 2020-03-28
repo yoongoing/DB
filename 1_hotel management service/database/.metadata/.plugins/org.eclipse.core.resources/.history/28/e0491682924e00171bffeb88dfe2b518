@@ -1,0 +1,88 @@
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.border.TitledBorder;
+
+public class TableView extends JPanel{
+	JButton tables[] = new JButton[20];
+	
+	private Connection db;
+	private OrderView orderView = null;
+	
+	private String loginSet[] = null;
+	
+	TableView(Connection db) {
+		this.db = db;
+		this.setBorder(new TitledBorder("테이블 현황"));
+		this.setLayout(new GridLayout(4, 5));
+		
+		for (int i = 0; i < 20; i++) {
+			tables[i] = new JButton((i+1)+"");
+			tables[i].setBackground(Color.WHITE);
+			tables[i].setFont(new Font("Bold", 1, 20));
+			tables[i].addActionListener(new ActionListener() {
+				
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// TODO Auto-generated method stub
+//					System.out.println("test" + ((JButton)e.getSource()).getText());
+					int tableNum = Integer.parseInt(((JButton)e.getSource()).getText());
+					orderView.comboTableName.setSelectedItem(String.valueOf(tableNum));
+					orderView.updateOrderList();
+				}
+			});
+			this.add(tables[i]);
+		}
+	}
+	
+	public void checkTable(int tableNum) {
+		try {
+			String sql = "SELECT count(menuname) from orderlist where tablenum = " + tableNum;
+			PreparedStatement stmt = db.prepareStatement(sql);
+			ResultSet rs = stmt.executeQuery();
+			
+			rs.next();
+			int orderCount = rs.getInt("count(menuname)");
+			if(orderCount > 0) {
+				tables[tableNum-1].setBackground(Color.YELLOW);
+			}
+			else {
+				tables[tableNum-1].setBackground(Color.WHITE);
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void setLoginTable(String loginSet[]){
+        this.loginSet = loginSet;
+        if(loginSet != null) {
+            for(int i = 1; i <= 20; i++) {
+                tables[i].setEnabled(true);
+            }
+        }
+        else {
+            for(int i = 1; i <= 20; i++) {
+                tables[i].setEnabled(false);
+            }
+        }
+        
+    }
+	
+	public void setOrderView(OrderView orderView) {
+		this.orderView = orderView;
+	}
+	public void setLogin(String loginSet[]) {
+		this.loginSet = loginSet;
+	}
+
+	
+}

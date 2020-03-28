@@ -1,0 +1,71 @@
+chapter 2
+	relation, attribute, tuple
+	database schema
+	key superkey candidate key ,foreign key difference
+
+	cartesian product
+	natural join
+	should draw
+chapter 3
+	ddl , dml 
+	natural join이 어떤 조인인지 명확하게 알아야한다.
+
+	join ~using(course_id) --> 공통부분 == natural join
+	rename operation : old name as new name
+	string operation 기본 like
+	between 90 and 100 == >=90 and <= 100
+	Null 연산 unknown
+		or
+		and
+		not
+		unknown은 질의 결과 false
+	aggregate functions
+		avg, count, sum, count(*)는 distinct못씀
+		group by, having 은 group by 의 조건절
+	subquery
+		'in'
+		some 적어도 하나를 구할때
+		all 전체
+	바깥질의 하위질의 exists : true false값이 있냐없냐? 항상 where절 다음에 바깥질의 부분과 하위질의 구문이 동등한가 가 있다
+	difference between exists and in
+	with clause 임시 relation
+
+	left outer join
+		natural left outer join
+		left outer join-> natural이 있냐 없냐 차이 알기
+
+	view 가상의 relation
+	create view v as <query expression>
+
+	transactions
+
+	1.atomicity
+	2.consistency
+	3.isolation
+	4.durability
+
+	referential integrity
+	참조무결성 제약조건
+
+	index 왜씀? 빨리찾을라고 시발련아
+
+	privileges in sql
+
+	select
+	insert
+	update
+	delete
+	all privilieges
+		grant select on instructor to U1, U2, U3
+		권한 어떻게 줘야되는지 써라
+
+	roles
+		한꺼번에 권한을 줄라고 새꺄
+		roles은 userid쓰는곳에 쓸수있음 인정 어 인정
+
+	authorization on views
+		특정사용자 못보게 머머리님
+
+	sql functions 
+					> 차이 나 넘버 99
+	sql procedures

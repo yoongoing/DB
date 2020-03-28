@@ -1,0 +1,839 @@
+import java.awt.BorderLayout;
+import java.util.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.StringTokenizer;
+
+import javax.swing.*;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+public class Viewer implements ActionListener {
+	
+	Calendar cal = Calendar.getInstance();
+	String today = cal.get(Calendar.YEAR) + "/"
+			+ (cal.get(Calendar.MONTH)+1) + "/"
+			+ cal.get(Calendar.DATE);
+
+	
+	Connection db;
+	String sql;
+	PreparedStatement stmt;
+	ResultSet rs;
+	int customer_id = 1000;
+	int menu_id = 1000;
+
+	int dataLoaded = 0;
+
+	String authority; 
+	String currentStaff; 
+	JFrame frame = new JFrame();
+
+	
+	JLabel title = new JLabel("식당 주문 관리");
+
+
+	JMenuBar bar = new JMenuBar();
+	
+	JMenu menu = new JMenu("Menu");
+	
+	JMenuItem open = new JMenuItem("Open");
+	JMenuItem login = new JMenuItem("Log in");
+	
+	String filePath;
+
+	
+	JPanel main_panel = new JPanel();
+	JPanel title_panel = new JPanel();
+	JPanel grid_panel = new JPanel();
+	JPanel table_panel = new JPanel();
+	JPanel order_panel = new JPanel();
+	JPanel menu_panel = new JPanel();
+	JPanel sign_panel = new JPanel();
+
+	
+	JButton[] tables = new JButton[20];
+
+	
+	JTextArea t_order = new JTextArea();
+	String t_order_string = "ㅂㅈㄷㅂㅈㄷ\n";
+	JLabel l_customer_name = new JLabel("고객명");
+	JTextField f_customer_name = new JTextField();
+	JLabel l_table_name = new JLabel("테이블명");
+	JComboBox<String> c_table_name = new JComboBox<String>();
+	JButton b_order = new JButton("주문");
+	JButton b_cancle = new JButton("취소");
+	JButton b_pay = new JButton("결제");
+
+	JButton[] menus = new JButton[20];
+
+	JTabbedPane tp = new JTabbedPane();
+	JPanel tab_customer = new JPanel();
+	JLabel l_customer_name4 = new JLabel("고객명");
+	JTextField f_customer_name4 = new JTextField();
+	JButton b_sign = new JButton("가입");
+	JButton b_find = new JButton("조회");
+	JTextArea t_customer = new JTextArea();
+	
+	JPanel tab_sales = new JPanel();
+	JLabel l_period = new JLabel("매출");
+	JComboBox<String> c_date = new JComboBox<String>();
+	JTextArea t_sales_area = new JTextArea();
+	
+	JPanel tab_staff = new JPanel();
+	JLabel l_staff_name = new JLabel("직원명");
+	JTextField f_staff_name = new JTextField();
+	JButton b_add_staff = new JButton("추가");
+	JButton b_find_staff = new JButton("조회");
+	JTextArea t_staff_area = new JTextArea();
+	
+	JPanel tab_menu = new JPanel();
+	JLabel l_menu_name = new JLabel("메뉴명");
+	JTextField f_menu_name = new JTextField();
+	JButton b_menu_add = new JButton("추가");
+	JButton b_find_m = new JButton("조회");
+	JTextArea t_menu_area = new JTextArea();
+
+	
+	public Viewer(Connection db) {
+		this.db = db;
+		// JMenuBar
+		open.setMnemonic('O');
+		login.setMnemonic('L');
+		open.addActionListener(this);
+		login.addActionListener(this);
+		menu.add(open); 
+		menu.add(login);
+		bar.add(menu); 
+
+		// title_panel
+		title.setFont(new Font("Bold", 1, 40));
+		title_panel.add(title);
+		title_panel.setBackground(Color.WHITE);
+		title_panel.setBorder(new LineBorder(Color.BLACK, 3));
+
+		// grid_panel
+		grid_panel.setLayout(new GridLayout(2, 2));
+
+	
+		// table_panel
+		table_panel.setBorder(new TitledBorder("테이블 현황"));
+		table_panel.setLayout(new GridLayout(4, 5));
+		
+		for (int i = 0; i < 20; i++) {
+			tables[i] = new JButton((i+1)+"");
+			tables[i].setBackground(Color.WHITE);
+			tables[i].setFont(new Font("Bold", 1, 20));
+			tables[i].addActionListener(this);
+			table_panel.add(tables[i]);
+		}
+
+		
+		// order_panel
+		order_panel.setBorder(new TitledBorder("주문내역"));
+		order_panel.setLayout(null);
+		t_order.setBorder(new LineBorder(Color.gray, 2));
+		t_order.setEditable(false);
+		JScrollPane scroll = new JScrollPane();
+		scroll.setViewportView(t_order);
+		for (int i = 0; i < 20; i++) {
+			c_table_name.addItem((i + 1) +"");
+		}
+		c_table_name.addActionListener(this);
+		b_order.addActionListener(this);
+		b_order.setBackground(Color.WHITE);
+		b_cancle.addActionListener(this);
+		b_cancle.setBackground(Color.WHITE);
+		b_pay.addActionListener(this);
+		b_pay.setBackground(Color.WHITE);
+		
+		scroll.setBounds(15, 18, 200, 330);
+		l_customer_name.setBounds(230, 15, 100, 30);
+		f_customer_name.setBounds(230, 50, 100, 30);
+		l_table_name.setBounds(230, 85, 100, 30);
+		c_table_name.setBounds(230, 110, 100, 30);
+		b_order.setBounds(230, 170, 100, 30);
+		b_cancle.setBounds(230, 220, 100, 30);
+		b_pay.setBounds(230, 270, 100, 30);
+		// order_panel
+		order_panel.add(scroll);
+		order_panel.add(l_customer_name);
+		order_panel.add(f_customer_name);
+		order_panel.add(l_table_name);
+		order_panel.add(c_table_name);
+		order_panel.add(b_order);
+		order_panel.add(b_cancle);
+		order_panel.add(b_pay);
+
+		
+		// menu_panel
+		menu_panel.setBorder(new TitledBorder("메뉴"));
+		menu_panel.setLayout(new GridLayout(10, 2));
+		
+		for (int i = 0; i < 20; i++) {
+			menus[i] = new JButton();
+			menus[i].addActionListener(this);
+			menus[i].setBackground(Color.WHITE);
+			menu_panel.add(menus[i]);
+		}
+
+		
+		// sign_panel
+		sign_panel.setBorder(new TitledBorder("등록/조회"));
+		sign_panel.setLayout(new BorderLayout());
+		
+		tab_customer.setLayout(null);
+		l_customer_name4.setBounds(15, 15, 100, 30);
+		f_customer_name4.setBounds(15, 50, 100, 30);
+		b_sign.setBounds(180, 50, 60, 30);
+		b_find.setBounds(250, 50, 60, 30);
+		t_customer.setBounds(15, 90, 300, 200);
+		t_customer.setBorder(new LineBorder(Color.gray, 2));
+		b_sign.addActionListener(this);
+		b_find.addActionListener(this);
+		b_sign.setBackground(Color.WHITE);
+		b_find.setBackground(Color.WHITE);
+		tab_customer.add(l_customer_name4);
+		tab_customer.add(f_customer_name4);
+		tab_customer.add(b_sign);
+		tab_customer.add(b_find);
+		tab_customer.add(t_customer);
+		
+		tab_sales.setLayout(null);
+		l_period.setBounds(15, 15, 100, 30);
+		c_date.setBounds(150, 15, 100, 30);
+		t_sales_area.setBounds(15, 50, 300, 240);
+		t_sales_area.setBorder(new LineBorder(Color.gray, 2));
+		tab_sales.add(l_period);
+		tab_sales.add(c_date);
+		tab_sales.add(t_sales_area);
+		
+		tab_staff.setLayout(null);
+		l_staff_name.setBounds(15, 15, 100, 30);
+		f_staff_name.setBounds(15, 50, 100, 30);
+		b_add_staff.setBounds(150, 50, 90, 30);
+		b_find_staff.setBounds(250, 50, 60, 30);
+		t_staff_area.setBounds(15, 90, 300, 200);
+		t_staff_area.setBorder(new LineBorder(Color.gray, 2));
+		b_add_staff.addActionListener(this);
+		b_find_staff.addActionListener(this);
+		b_add_staff.setBackground(Color.WHITE);
+		b_find_staff.setBackground(Color.WHITE);
+		tab_staff.add(l_staff_name);
+		tab_staff.add(f_staff_name);
+		tab_staff.add(b_add_staff);
+		tab_staff.add(b_find_staff);
+		tab_staff.add(t_staff_area);
+		
+		tab_menu.setLayout(null);
+		l_menu_name.setBounds(15, 15, 100, 30);
+		f_menu_name.setBounds(15, 50, 120, 30);
+		b_menu_add.setBounds(150, 50, 90, 30);
+		b_find_m.setBounds(250, 50, 60, 30);
+		t_menu_area.setBounds(15, 90, 300, 200);
+		t_menu_area.setBorder(new LineBorder(Color.gray, 2));
+		b_menu_add.addActionListener(this);
+		b_find_m.addActionListener(this);
+		b_menu_add.setBackground(Color.WHITE);
+		b_find_m.setBackground(Color.WHITE);
+		tab_menu.add(l_menu_name);
+		tab_menu.add(f_menu_name);
+		tab_menu.add(b_menu_add);
+		tab_menu.add(b_find_m);
+		tab_menu.add(t_menu_area);
+		
+		tp.addTab("고객", tab_customer);
+		tp.addTab("매출", tab_sales);
+		tp.addTab("직원", tab_staff);
+		tp.addTab("메뉴", tab_menu);
+		sign_panel.add(tp, BorderLayout.CENTER);
+
+		
+		grid_panel.add(table_panel);
+		grid_panel.add(order_panel);
+		grid_panel.add(menu_panel);
+		grid_panel.add(sign_panel);
+
+		// main_panel
+		main_panel.setLayout(new BorderLayout());
+		main_panel.add(title_panel, BorderLayout.NORTH);
+		main_panel.add(grid_panel, BorderLayout.CENTER);
+
+		
+		frame.setJMenuBar(bar); // JMenuBar
+		frame.add(main_panel);
+
+	
+		frame.setTitle("식당 관리 시스템");
+		frame.setBounds(0, 0, 700, 850);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setVisible(true);
+		try {
+			this.menuUpdate();
+			this.checkDataIsOpen();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			System.out.println("???? ??¼? : Æ??? ¿?±¸");
+			JOptionPane.showMessageDialog(null, "로그인 되어습니다.");
+		}
+	}
+
+	//dbtable을 만드는 함수
+	public void checkDataIsOpen() {
+		try {
+			sql = "select * from menu";
+			stmt = db.prepareStatement(sql);
+			rs = stmt.executeQuery();
+			rs.next();
+			String check = rs.getString("menu");
+		}
+		catch (SQLException e) {
+			JOptionPane.showMessageDialog(null, "??????¸? º?·?¿? ???? ¾ø½?´?´?.");
+			e.printStackTrace();
+		}
+	}
+	public void menuUpdate() throws SQLException {
+		sql = "select menu from menu";
+		stmt = db.prepareStatement(sql);
+		rs = stmt.executeQuery();
+		for (int i = 0; rs.next(); i++) {
+			menus[i].setText(rs.getString("menu"));
+		}
+	}
+
+		public void createTable() throws SQLException{	
+				
+				String guestQuery = "CREATE TABLE guest (\n"
+			+ "guestname	    varchar(10) not null,\n"
+			+ "guestID		    varchar(5)  not null, \n"
+			+ "guestBirthDay  	varchar(5)  not null, \n"
+			+ "guestLevel       varchar(10) not null, \n"
+			+ "totalpayment     Integer not null, \n"
+			+ "primary key(guestname) \n"
+					+ ")";	
+		
+		String staffQuery = "CREATE TABLE staff (\n"
+			+ "staffname	varchar(10) not null,\n"
+			+ "staffLevel   varchar(10) not null, \n"
+			+ "totalpayment     Integer not null, \n"
+			+ "primary key(staffname) \n"
+					+ ")";	
+				
+		String foodmenuQuery = "CREATE TABLE foodmenu (\n"
+			+ "foodid	    Integer not null,\n"
+			+ "foodname	    varchar(30) not null,\n"
+			+ "foodprice	Integer  not null, \n"
+			+ "primary key(foodname) \n"
+					+ ")";	
+		
+		String paymentQuery = "CREATE TABLE payment (\n"
+			+ "paydate         date	    not null, \n"
+			+ "guestname	varchar(10) not null,\n"
+			+ "foodname	    varchar(30) not null,\n"
+			+ "foodprice	Integer  not null \n"
+			
+					+ ")";	
+		
+		String sql = "";	
+		//for문으로 table 생성을 위해 table이름, query 배열을 생성
+		try{
+			 String[] tablename = {"guest","staff","foodmenu","payment"};
+		 String[] query = {guestQuery, staffQuery, foodmenuQuery,paymentQuery};
+		 for(int i = 0; i<tablename.length; i++){		
+			 //db에 이미 table이 생성이 되어있는지를 check, 없다면 생성, 있다면 생성하지 않음
+				 if(dbtableexist(tablename[i]) == false){
+					 System.out.println(tablename[i]);
+					 sql = query[i];
+					 stmt = db.prepareStatement(sql);
+			    	 rs=stmt.executeQuery();	         
+			         db.commit();
+					}			
+			 }         
+		}
+		catch(SQLException e){	    		
+				JOptionPane.showMessageDialog(null,"테이블생성에 문제가 발생했습니다 : " +  e);	 
+			    	db.rollback();	    	
+		    }
+			finally{
+		    	 stmt.close();
+			     rs.close();
+		    }
+		}
+		
+		//createTable 함수 실행시 DB에 table의 존재 유무를 알려주는 함수	
+		public boolean dbtableexist(String tablename) throws SQLException{
+		    String sql = "Select TABLE_NAME from user_tables where table_name='"+tablename.toUpperCase()+"' ";  
+		 boolean existTable = false;
+		 stmt = db.prepareStatement(sql);
+		 rs=stmt.executeQuery();
+		 
+		while (rs.next()){
+		    if(rs.getString("table_name").equals(tablename.toUpperCase())){
+			existTable = true;	// db에 이미 테이블 존재시 true : table 생성할 필요가 없음                            
+		            }               
+		        }
+		        stmt.close();
+		     	rs.close(); 
+		        return existTable;
+		}
+		
+		//filetext를 통해 고객정보를 db에 저장해주는 함수
+		public void regiguest(String guestname, String guestID, String guestbirthday, String guestLevel) throws SQLException{
+			try{
+				int totalpayment = getguestlevel(guestLevel);
+				//직원, 또는 회원이 이미 db에 존재하면 알려줌
+		if(dbperson("guest",guestname) == true){
+		JOptionPane.showMessageDialog(null, guestname + " : 이미 등록되어 있습니다.");
+		}
+		//직원, 또는 회원이 db에 없으면 >저장
+		else if(dbperson("guest",guestname) == false){
+		String sql = "INSERT INTO guest " + " VALUES ('" + guestname + "','" + guestID + "','" + guestbirthday + "','" + guestLevel + "','" + totalpayment + "')";
+		//System.out.println(sql);
+		stmt = db.prepareStatement(sql);
+		stmt.executeUpdate();
+		System.out.println("guest : " + guestname  + " 가 DB에 등록되었습니다.");
+			db.commit();
+			stmt.close(); 
+		}
+		
+		System.out.println("-----------------------------");
+		}
+		catch(SQLException e1){
+			e1.getStackTrace();
+			JOptionPane.showMessageDialog(null, "DB저장에 문제가 생겼습니다. 다시 시도해 주세요" + e1);
+				stmt.close(); 
+			}		 
+		}
+		
+		//filetext를 통해 직원정보를 db에 저장해주는 함수
+		public void registaff(String staffname, String staffLevel) throws SQLException{
+			try{
+				int payment = 0;
+				//직원, 또는 회원이 이미 db에 존재하면 알려줌
+		if(dbperson("staff",staffname) == true){
+		JOptionPane.showMessageDialog(null, staffname + " : 이미 등록되어 있습니다.");
+		}
+		//직원, 또는 회원이 이미 db에 존재하지 않으면 db에 저장
+		else if(dbperson("staff",staffname) == false){
+		String sql = "INSERT INTO staff " + " VALUES ('" + staffname + "','" + staffLevel +"','" + payment + "')"; 
+		stmt = db.prepareStatement(sql);
+		stmt.executeUpdate();
+		System.out.println("guest : " + staffname  + " 가 DB에 등록되었습니다.");
+			db.commit();
+			stmt.close();
+		}
+		
+		System.out.println("-----------------------------");
+		}
+		catch(SQLException e1){
+			e1.getStackTrace();
+			JOptionPane.showMessageDialog(null, "DB저장에 문제가 생겼습니다. 다시 시도해 주세요" + e1);
+			}		 
+		}
+		
+		//filetext를 통해 메뉴정보를 db에 저장해주는 함수
+		public void regifood(int foodid,String foodname, int foodprice) throws SQLException {
+			try{
+				if(dbfood(foodname) == true){
+					JOptionPane.showMessageDialog(null, foodname + " : 이미 등록된 메뉴입니다.");
+		}
+		else if(dbfood(foodname) == false){
+			String sql = "INSERT INTO foodmenu VALUES (" + foodid+",'" + foodname + "'," + foodprice + ")"; 
+		System.out.println(sql);
+		stmt = db.prepareStatement(sql);
+		stmt.executeUpdate();
+		System.out.println("foodmenu : " + foodname  + " 가 DB에 등록되었습니다.");   
+			db.commit();
+			stmt.close();
+		}
+		System.out.println("-----------------------------");
+		}catch(SQLException e1){
+			e1.getStackTrace();
+			JOptionPane.showMessageDialog(null, "메뉴 등록에 실패했습니다.");
+			}
+		}
+		
+		//db에저장된 사람인지 체크하는 함수
+		boolean dbperson(String tablename, String name) throws SQLException{
+			boolean personis = false;
+			String sql = "SELECT "+tablename+ "name from " + tablename + " where " +tablename+"name = '" +name+"'";
+		//System.out.println("checkpersonexist : " + sql);
+		
+		 stmt = db.prepareStatement(sql);
+		 rs=stmt.executeQuery();
+		 
+		 while (rs.next()){
+			 if(rs.getString(tablename+"name").equals(name)){
+		    		 personis  = true;	                            
+		         }           
+		     }
+		     stmt.close();
+			 rs.close(); 
+		     return personis;
+		}
+		
+		//db에저장된 음식인지 체크하는 함수
+		boolean dbfood(String foodname) throws SQLException{
+			 boolean existFoodcheck = false;
+			 String existFood = "select foodname from foodmenu where foodname = '"+ foodname+"'";
+		 
+		 stmt = db.prepareStatement(existFood);
+		 rs = stmt.executeQuery();
+		 //System.out.println("existFood : " + existFood);	 
+		 while(rs.next()){
+			 if(rs.getString("foodname").equals(foodname)){
+					 existFoodcheck = true;		
+				 }		 		
+			 }
+			 stmt.close();
+		     rs.close(); 
+			 return existFoodcheck;
+		}
+		
+		//db에서 음식이름을 가져와 list에 담아주는 함수
+		public ArrayList getfoodname() throws SQLException{
+			 ArrayList foodnamelist = new ArrayList();
+			 String findFood = "select foodname from foodmenu";
+		 stmt = db.prepareStatement(findFood);
+		 rs = stmt.executeQuery();
+		 while(rs.next()){
+			 foodnamelist.add(rs.getString("foodname"));	
+			 }
+			 stmt.close();
+			 rs.close(); 
+			 return foodnamelist;
+		}
+		
+		
+		//음식의 정보를 db에서 가져옴
+		//음식정보에 있는 textarea에 보여주게 됨
+		public String getFoodmenu(String foodname) throws SQLException {
+			 String query = "select foodprice from foodmenu where foodname = '" + foodname + "'";
+		 String price = "";
+		 //System.out.println(query);
+		 stmt = db.prepareStatement(query);
+		 rs = stmt.executeQuery();
+		 if(rs.next()){
+			 price = String.valueOf(rs.getInt("foodprice"));	
+		 }
+		 else{
+			 JOptionPane.showMessageDialog(null,"없는메뉴입니다.");
+			 } 
+			 return price;
+		}
+		
+		//직원의 정보를 db에서 가져와 주는 함수
+		//직원정보에 있는 textarea에 보여주게 됩니다.
+		public void getStaffInformation(String staffname) throws SQLException {
+			String query = "select * from staff where staffname = '" + staffname + "'";
+		 
+		 //System.out.println(query);
+		 stmt = db.prepareStatement(query);
+		 rs = stmt.executeQuery();
+		 if(rs.next()){
+			 String name = rs.getString("staffname");
+		 String Level = rs.getString("stafflevel");
+		 int totalpayment = rs.getInt("totalpayment");
+		 f_staff_name.setText("직원명 : " + name + "\n" + "직  급  : " + Level + "\n총 실적 : " + totalpayment);
+		 }
+		 else{
+			 JOptionPane.showMessageDialog(null,"없는 직원입니다.");
+			 }
+		}
+		
+		//회원의 정보를 db에서 가져와 주는 함수
+		//회원정보에 있는 textarea에 보여주게 됩니다.
+		public void getguestInformation(String guestname) throws SQLException {
+			String query = "select * from guest where guestname = '" + guestname + "'";
+		 
+		 //System.out.println(query);
+		 stmt = db.prepareStatement(query);
+		 rs = stmt.executeQuery();
+		 if(rs.next()){
+			 String name = rs.getString("guestname");
+		 String id = rs.getString("guestid");
+		 String birthday = rs.getString("guestbirthday");
+		 String level = rs.getString("guestlevel");
+		 String totalpayment = String.valueOf(rs.getInt("totalpayment"));
+		 t_customer.setText("회원명 : " + name + "\n" + "고객Id  : " + id + "\n생일 : " + birthday + "\n등급 : " + level + "\n총 구매금액: " + totalpayment);
+		 }
+		 else{
+			 JOptionPane.showMessageDialog(null,"없는직원입니다.");
+			 }
+		}
+		//결제 후 회원의 총 결제 금액, 결제정보 등을 db에 업데이트 해주는 함수
+		public void payment(String guestname, ArrayList<orderlist> orderlist) throws SQLException{
+			String level = "";
+		String query = "SELECT guestlevel from guest where guestname = '" + guestname + "'";
+		stmt = db.prepareStatement(query);
+		rs = stmt.executeQuery();
+		 if(rs.next()){
+			 level = rs.getString("guestlevel");
+		 }
+		
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+		String currentTime = format.format(new Date());
+		int foodprice = 0;
+		int totalprice = 0;
+		System.out.println(currentTime);
+		
+		for(int i = 0; i < orderlist.size(); i ++){
+			String name = guestname;
+			String foodname = orderlist.get(i).getfoodname();
+			foodprice = discount(level,orderlist.get(i).getfoodprice());
+			totalprice += foodprice; 
+			query = "INSERT INTO payment " + " VALUES ('" + currentTime + "','" + name + "','" + foodname + "','" + foodprice +"')";
+		    	stmt = db.prepareStatement(query);
+		    	rs = stmt.executeQuery();
+		    }
+		    
+		    updateTotalPayment(guestname, totalprice);
+		    
+		}
+		//결제 후 회원의 총 결제 금액을 업데이트 해주는 함수
+		public void updateTotalPayment(String guestname, int price) throws SQLException{
+			int totalpayment = 0;
+			int currentpayment = 0;
+			String level = "";
+		String query = "SELECT totalpayment from guest where guestname = '" + guestname + "'";
+		stmt = db.prepareStatement(query);
+		rs = stmt.executeQuery();
+		if(rs.next()){
+			currentpayment =rs.getInt("totalpayment");
+			totalpayment = currentpayment + price;
+			level = updateguestlevel(totalpayment);		
+		}
+		
+		messageifupgrade(currentpayment,totalpayment);
+		query = "update guest set guestlevel = '"+level+"', totalpayment = "+totalpayment+"\n"
+		 + " where guestname = '"+ guestname + "'";
+			
+			System.out.println(query);
+			stmt = db.prepareStatement(query);
+			rs = stmt.executeQuery();
+			db.commit();
+		}
+		
+		//결제 후 회원의 등급을 재 조정해 주는 함수
+		public String updateguestlevel(int totalpayment){
+			String level = "";
+		if(totalpayment < 300000){
+			level = "Normal"; 			
+		}
+		else if(totalpayment>= 300000 && totalpayment < 500000){
+			level = "Bronze"; 
+		}
+		else if(totalpayment>= 500000 && totalpayment < 1000000){
+			level = "Silver"; 
+		}
+		else if(totalpayment>= 1000000){
+			level = "Gold"; 
+			}
+			return level;
+		}
+		
+		//결제시 회원의 등급에 따라 할인된 가격을 내주는 함수
+		public int discount(String guestLevel, String price){
+			int payprice = Integer.parseInt(price);
+			System.out.println(payprice);
+			if(guestLevel.equals("Gold")){		
+		payprice = (int) (payprice*(0.7));
+		JOptionPane.showMessageDialog(null,"Gold 회원 > 30% 할인되셨습니다. : " + payprice);
+		System.out.println("discount: " + payprice);
+		}
+		else if(guestLevel.equals("Silver")){
+		payprice = (int) (payprice*(0.8));
+		JOptionPane.showMessageDialog(null,"Silver 회원 > 20% 할인되셨습니다. : " + payprice);
+		}
+		else if(guestLevel.equals("Bronze")){
+		payprice = (int) (payprice*(0.9));
+		JOptionPane.showMessageDialog(null,"Bronze 회원 > 10% 할인되셨습니다. : " + payprice);
+		}
+		else if(guestLevel.equals("Normal")){
+				payprice = payprice;
+			}
+			return payprice;
+		}
+		
+		
+		//data.txt에서 회원의 정보를 가져올때, 등급에 따른 총 실적을 미리 저장해놓는 함수
+		public int getguestlevel(String level){
+			int totalpayment = 0;
+			if(level.equals("Gold")){
+			totalpayment = 1000000;
+		}
+		else if(level.equals("Silver")){
+			totalpayment = 500000;
+		}
+		else if(level.equals("Bronze")){
+			totalpayment = 300000;
+		}
+		else if(level.equals("Normal")){
+		    	totalpayment = 0;
+			}
+			return totalpayment;
+		}
+		
+		//직원의 등급을 db에서 가져오는 함수
+		public String getstafflevel(String staffname) throws SQLException{
+			String stafflevel = "";
+		String query = "SELECT stafflevel from staff where staffname = '" + staffname + "'";
+		stmt = db.prepareStatement(query);
+		rs = stmt.executeQuery();
+		if(rs.next()){
+			stafflevel = rs.getString("stafflevel");
+		//level = updateguestlevel(totalpayment);		
+			}
+			return stafflevel;
+		}
+		
+		//직원의 매출실적을 업데이트 해주기 위한 함수
+		//결제를 누르면 결제된 음식의 총 가격을 합산하여 updatestaffrecord 함수로 파라메터를 넘겨줍니다.
+		public void staffrecord(String staffname, ArrayList<orderlist> orderlist) throws SQLException {
+			String level = "";
+		
+		int foodprice = 0;
+		int totalprice = 0;
+		
+		
+		for(int i = 0; i < orderlist.size(); i ++){
+			String name = staffname;
+			//String foodname = orderlist.get(i).getfoodname();
+		    	foodprice = Integer.parseInt(orderlist.get(i).getfoodprice());
+		    	totalprice += foodprice; 
+		    	
+		    }
+		    
+		    updatestaffrecord(staffname,totalprice);
+			
+		}
+		
+		//직원의 매출실적을 업데이트 해주는 함수
+		public void updatestaffrecord(String staffname,int totalprice) throws SQLException{
+			String query = "update staff set totalpayment = "+totalprice+"\n"
+		 + " where staffname = '"+ staffname + "'";
+			
+			System.out.println(query);
+			stmt = db.prepareStatement(query);
+			rs = stmt.executeQuery();
+			db.commit();
+		}
+		
+		//식당의 매출정도를 알아보는 함수
+		public void findstorerecord(String date) throws SQLException {
+			String recordofoneday = "";
+		String recordmostsellingfood = "";
+		String recordleastsellingfood = "";
+		String recordoftotal = "";
+		ArrayList<String> recordfoodname = new ArrayList();
+		System.out.println(date);
+		//일매출
+		String query = "select sum(foodprice) from payment \n"
+		 + " where paydate = to_date('" + date + "','yy/mm/dd')";
+		System.out.println(query);
+		stmt = db.prepareStatement(query);
+		rs = stmt.executeQuery();
+		System.out.println();
+		if(rs.next()){
+			recordofoneday = rs.getString("sum(foodprice)");
+		if(recordofoneday == null){
+			recordofoneday = "결과없음";
+		}
+		//level = updateguestlevel(totalpayment);		
+		}
+		else{
+			recordofoneday = "결과없음";
+		}
+		System.out.println(recordofoneday);
+		String query1 = "select sum(foodprice),foodname from payment where paydate = to_date('" + date + "','yy/mm/dd') group by foodname order by sum(foodprice) DESC ";
+		stmt = db.prepareStatement(query1);
+		rs = stmt.executeQuery();
+		
+		while(rs.next()){
+			
+			recordfoodname.add(rs.getString("foodname"));
+		//level = updateguestlevel(totalpayment);		
+		}
+		
+		int recordfoodnamesize = recordfoodname.size();
+		System.out.println(recordfoodnamesize);
+		if(recordfoodnamesize == 0 ){
+			recordmostsellingfood = "결과없음";	
+		recordleastsellingfood = "결과없음";
+		}
+		else{
+			recordmostsellingfood = recordfoodname.get(0).toString();		
+			recordleastsellingfood = recordfoodname.get(recordfoodnamesize-1).toString();
+			
+			for (int p = 0; p < recordfoodnamesize; p ++){
+				System.out.println(recordfoodname.get(p).toString());
+			}
+		}
+				
+		
+		String query2 = "select sum(foodprice) from payment \n"
+		 + " where paydate <= to_date('" + date + "','yy/mm/dd')";
+		System.out.println(query2);
+		stmt = db.prepareStatement(query2);
+		rs = stmt.executeQuery();
+		
+		if(rs.next()){
+			recordoftotal   = rs.getString("sum(foodprice)");
+		if(recordoftotal == null){
+			recordoftotal = "결과없음";
+		}//level = updateguestlevel(totalpayment);		
+		}
+		else{
+			recordoftotal  = "결과없음";
+		}
+		
+		t_sales_area.setText("일 매출 : " + recordofoneday + "\n가장많이 : " + recordmostsellingfood + "\n가장적게 : " +recordleastsellingfood + "\n 합산 : " +  recordoftotal);
+		}
+		
+		//메뉴 등록시 음식이 총 몇개 등록되어있는지 알아보는 함수
+		public int getlastfoodid() throws SQLException{
+			
+			int foodid = 0;
+			String query = "select max(foodid) from foodmenu";
+		stmt = db.prepareStatement(query);
+		rs = stmt.executeQuery();
+		if(rs.next()){
+			foodid = rs.getInt("max(foodid)");
+			}
+			return foodid;
+		}
+		
+		//결제 후 회원 등급이 바꼈을 때 내주는 메세지
+		public void messageifupgrade(int currentpayment,int totalpayment){
+			if(currentpayment < 300000 && totalpayment >= 300000 ){
+				JOptionPane.showMessageDialog(null,"Bronze 회원으로 등급이 올랐습니다. " );
+		}
+		else if(currentpayment <500000 && currentpayment > 300000 && totalpayment >= 500000 ){
+			JOptionPane.showMessageDialog(null,"Sivler 회원으로 등급이 올랐습니다. " );
+			}
+		   else if(currentpayment <1000000 && currentpayment > 500000 && totalpayment >= 1000000 ){
+			   JOptionPane.showMessageDialog(null,"Gold 회원으로 등급이 올랐습니다.");
+			}
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			// TODO Auto-generated method stub
+			
+		}	
+}
